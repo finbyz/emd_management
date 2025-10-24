@@ -12,6 +12,7 @@ setup(
 	description="Emd Management App",
 	author="FinByz",
 	author_email="info@finbyz.com",
+	license="GPLv3",
 	packages=find_packages(),
 	zip_safe=False,
 	include_package_data=True,

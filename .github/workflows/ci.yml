@@ -4,7 +4,7 @@ name: CI
 on:
   push:
     branches:
-      - develop
+      - version-15
   pull_request:
 
 concurrency:
@@ -19,7 +19,15 @@ jobs:
     name: Server
 
     services:
-      mariadb:
+     redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+    redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
+    mariadb:
         image: mariadb:10.6
         env:
           MYSQL_ROOT_PASSWORD: root
@@ -29,21 +37,26 @@ jobs:
 
     steps:
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Find tests
+        run: |
+          echo "Finding tests"
+          grep -rn "def test" > /dev/null
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-p*ython@v4
         with:
           python-version: '3.10'
 
       - name: Setup Node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 18
           check-latest: true
 
       - name: Cache pip
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
@@ -55,13 +68,18 @@ jobs:
         id: yarn-cache-dir-path
         run: 'echo "::set-output name=dir::$(yarn cache dir)"'
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
+
+      - name: Install MariaDB Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mariadb-client
 
       - name: Setup
         run: |
@@ -73,9 +91,11 @@ jobs:
       - name: Install
         working-directory: /home/runner/frappe-bench
         run: |
+          bench get-app erpnext
           bench get-app emd_management $GITHUB_WORKSPACE
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
+          bench --site test_site install-app erpnext
           bench --site test_site install-app emd_management
           bench build
         env:
