@@ -5,7 +5,7 @@ app_title = "Emd Management"
 app_publisher = "FinByz"
 app_description = "Emd Management App"
 app_email = "info@finbyz.com"
-app_license = "MIT"
+app_license = "GPL-3.0"
 
 # Includes in <head>
 # ------------------
